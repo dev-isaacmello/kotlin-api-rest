@@ -51,6 +51,12 @@ class NoteController(
         return note.toResponse()
     }
 
+    @GetMapping
+    fun findByOwnerId(): List<NoteResponse> {
+        val ownerId = SecurityContextHolder.getContext().authentication!!.principal as String
+        return repository.findByOwnerId(ObjectId(ownerId)).map { it.toResponse() }
+    }
+
 
 
     private fun Note.toResponse(): NoteResponse = NoteResponse(
