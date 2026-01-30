@@ -7,10 +7,12 @@ import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
+import spring_boot_kotlin_api.demo.database.model.RefreshToken
 import spring_boot_kotlin_api.demo.database.model.User
 import spring_boot_kotlin_api.demo.database.repository.RefreshTokenRepository
 import spring_boot_kotlin_api.demo.database.repository.UserRepository
 import java.security.MessageDigest
+import java.time.Instant
 import java.util.Base64
 
 @Service
@@ -92,9 +94,20 @@ class AuthService(
 
     private fun storeRefreshToken(userId: ObjectId, rawRefreshToken: String) {
         val hashed = hashToken(rawRefreshToken)
+        val expiryMs = jwtService.refreshTokenValidityMs
+        val expiresAt = Instant.now().plusMillis(expiryMs)
+
+        refreshTokenRepository.save(
+            RefreshToken(
+                userId = userId,
+                expiresAt = expiresAt,
+                hashedToken = hashed
+            )
+        )
     }
 
-    private fun hashToken(token: String): String {
+
+        private fun hashToken(token: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
         val hashBytes = digest.digest(token.encodeToByteArray())
         return Base64.getEncoder().encodeToString(hashBytes)

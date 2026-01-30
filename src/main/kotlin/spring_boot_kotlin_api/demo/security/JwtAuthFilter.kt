@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
-class JwtAuthFilter(
+abstract class JwtAuthFilter(
     private val jwtService: JwtService
 ): OncePerRequestFilter() {
     override fun doFilterInternal(
