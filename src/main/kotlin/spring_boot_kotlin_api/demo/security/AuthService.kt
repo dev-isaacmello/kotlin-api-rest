@@ -1,6 +1,5 @@
 package spring_boot_kotlin_api.demo.security
 
-import org.bson.types.ObjectId
 import org.springframework.http.HttpStatus
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
@@ -12,6 +11,7 @@ import spring_boot_kotlin_api.demo.database.repository.UserRepository
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.Base64
+import java.util.UUID
 
 @Service
 class AuthService(
@@ -44,7 +44,7 @@ class AuthService(
         if (!hashEncoder.matches(password, user.hashedPassword!!)) {
             throw BadCredentialsException("Invalid credentials.")
         }
-        val userId = user.id.toHexString()
+        val userId = user.id.toString()
         val accessToken = jwtService.generateAccessToken(userId)
         val refreshToken = jwtService.generateRefreshToken(userId)
         storeRefreshToken(user.id, refreshToken)
@@ -56,7 +56,7 @@ class AuthService(
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token.")
         }
         val userId = jwtService.getUserIdFromToken(refreshToken)
-        val user = userRepository.findById(ObjectId(userId)).orElseThrow {
+        val user = userRepository.findById(UUID.fromString(userId)).orElseThrow {
             ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token.")
         }
         val hashed = hashToken(refreshToken)
@@ -70,7 +70,7 @@ class AuthService(
         return TokenPair(accessToken = newAccessToken, refreshToken = newRefreshToken)
     }
 
-    private fun storeRefreshToken(userId: ObjectId, rawRefreshToken: String) {
+    private fun storeRefreshToken(userId: UUID, rawRefreshToken: String) {
         val hashed = hashToken(rawRefreshToken)
         val expiresAt = Instant.now().plusMillis(jwtService.refreshTokenValidityMs)
         refreshTokenRepository.save(

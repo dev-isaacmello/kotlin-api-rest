@@ -24,6 +24,8 @@ class SecurityConfig(
                 .permitAll()
                 .requestMatchers("/auth/**")
                 .permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui.html")
+                .permitAll()
                 .dispatcherTypeMatchers(
                     DispatcherType.ERROR,
                     DispatcherType.FORWARD

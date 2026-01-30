@@ -8,7 +8,7 @@ class HashEncoder {
 
     private val encoder = BCryptPasswordEncoder()
 
-    fun encode(raw: String): String = encoder.encode(raw)
+    fun encode(raw: String): String = encoder.encode(raw)!!
 
     fun matches(raw: String, hashed: String): Boolean = encoder.matches(raw, hashed)
 }

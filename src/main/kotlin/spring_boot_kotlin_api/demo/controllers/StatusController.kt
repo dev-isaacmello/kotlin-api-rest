@@ -3,10 +3,12 @@ package spring_boot_kotlin_api.demo.controllers
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import io.swagger.v3.oas.annotations.tags.Tag
 import java.time.Instant
 
 @RestController
 @RequestMapping("/")
+@Tag(name = "Status", description = "Health check da API")
 class StatusController {
 
     data class StatusResponse(

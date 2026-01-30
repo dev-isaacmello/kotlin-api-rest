@@ -1,10 +1,10 @@
 package spring_boot_kotlin_api.demo.database.repository
 
-import org.bson.types.ObjectId
-import org.springframework.data.mongodb.repository.MongoRepository
+import org.springframework.data.jpa.repository.JpaRepository
 import spring_boot_kotlin_api.demo.database.model.RefreshToken
+import java.util.UUID
 
-interface RefreshTokenRepository: MongoRepository<RefreshToken, ObjectId> {
-    fun findByUserIdAndHashedToken(userId: ObjectId, hashedToken: String): RefreshToken?
-    fun deleteByUserIdAndHashedToken(userId: ObjectId, hashedToken: String)
+interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
+    fun findByUserIdAndHashedToken(userId: UUID, hashedToken: String): RefreshToken?
+    fun deleteByUserIdAndHashedToken(userId: UUID, hashedToken: String)
 }

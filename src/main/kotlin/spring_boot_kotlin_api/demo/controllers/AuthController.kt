@@ -11,9 +11,11 @@ import org.springframework.web.bind.annotation.RestController
 import spring_boot_kotlin_api.demo.api.TokenPairResponse
 import spring_boot_kotlin_api.demo.api.UserResponse
 import spring_boot_kotlin_api.demo.security.AuthService
+import io.swagger.v3.oas.annotations.tags.Tag
 
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "Auth", description = "Registro, login e refresh de tokens JWT")
 class AuthController(
     private val authService: AuthService
 ) {
@@ -35,7 +37,7 @@ class AuthController(
     @PostMapping("/register")
     fun register(@Valid @RequestBody body: AuthRequest): UserResponse {
         val user = authService.register(body.email, body.password)
-        return UserResponse(id = user.id.toHexString(), email = user.email)
+        return UserResponse(id = user.id.toString(), email = user.email)
     }
 
     @PostMapping("/login")

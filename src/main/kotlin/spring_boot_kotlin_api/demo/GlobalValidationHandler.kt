@@ -35,9 +35,10 @@ class GlobalValidationHandler {
         request: HttpServletRequest
     ): ResponseEntity<ApiError> {
         val status = ex.statusCode
+        val reasonPhrase = (status as? HttpStatus)?.reasonPhrase ?: "Error"
         val apiError = ApiError(
             status = status.value(),
-            error = status.reasonPhrase ?: "Error",
+            error = reasonPhrase,
             message = ex.reason ?: "Request failed",
             path = request.requestURI
         )

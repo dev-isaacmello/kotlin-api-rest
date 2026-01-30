@@ -2,17 +2,19 @@ package spring_boot_kotlin_api.demo.controllers
 
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
-import org.bson.types.ObjectId
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 import spring_boot_kotlin_api.demo.api.currentUserId
 import spring_boot_kotlin_api.demo.database.model.Note
 import spring_boot_kotlin_api.demo.database.repository.NoteRepository
+import io.swagger.v3.oas.annotations.tags.Tag
 import java.time.Instant
+import java.util.UUID
 
 @RestController
 @RequestMapping("/notes")
+@Tag(name = "Notes", description = "CRUD de notas (requer Bearer token)")
 class NoteController(
     private val noteRepository: NoteRepository
 ) {
@@ -37,7 +39,7 @@ class NoteController(
         val ownerId = currentUserId()
         val note = noteRepository.save(
             Note(
-                id = body.id?.let { ObjectId(it) } ?: ObjectId.get(),
+                id = body.id?.let { UUID.fromString(it) } ?: UUID.randomUUID(),
                 title = body.title.trim(),
                 content = body.content,
                 color = body.color,
@@ -56,18 +58,18 @@ class NoteController(
 
     @DeleteMapping("/{id}")
     fun deleteById(@PathVariable id: String) {
-        val objectId = ObjectId(id)
-        val note = noteRepository.findById(objectId).orElseThrow {
+        val noteId = UUID.fromString(id)
+        val note = noteRepository.findById(noteId).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Note not found")
         }
         if (note.ownerId != currentUserId()) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to delete this note")
         }
-        noteRepository.deleteById(objectId)
+        noteRepository.deleteById(noteId)
     }
 
     private fun Note.toResponse() = NoteResponse(
-        id = id.toHexString(),
+        id = id.toString(),
         title = title,
         content = content,
         color = color,
