@@ -1,76 +1,87 @@
 package spring_boot_kotlin_api.demo.security
 
 import io.jsonwebtoken.Claims
+import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatusCode
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
+import spring_boot_kotlin_api.demo.config.JwtProperties
 import java.util.Base64
-import java.util.Date
 import javax.crypto.SecretKey
 
 @Service
 class JwtService(
-    @Value("\${jwt.secret}") private val jwtSecret: String
+    private val jwtProperties: JwtProperties
 ) {
-    private val secretkey: SecretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtSecret))
-    private val accessTokenValidtyMs: Long = 15L * 60L * 1000L
-    val refreshTokenValidityMs: Long = 30L * 24 * 60 * 1000L
+    val refreshTokenValidityMs: Long get() = jwtProperties.refreshTokenValidityMs
 
-    private fun generateToken(
-        userId: String,
-        type: String,
-        expiry: Long
-    ): String {
-        val now = Date()
-        val expiryDate = Date(now.time + expiry)
+    private val secretKey: SecretKey by lazy {
+        Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtProperties.secret))
+    }
+
+    fun generateAccessToken(userId: String): String =
+        buildToken(userId, TokenType.ACCESS, jwtProperties.accessTokenValidityMs)
+
+    fun generateRefreshToken(userId: String): String =
+        buildToken(userId, TokenType.REFRESH, jwtProperties.refreshTokenValidityMs)
+
+    fun validateAccessToken(token: String): Boolean =
+        parseClaims(token)?.let { it.tokenType == TokenType.ACCESS } ?: false
+
+    fun validateRefreshToken(token: String): Boolean =
+        parseClaims(token)?.let { it.tokenType == TokenType.REFRESH } ?: false
+
+    fun getUserIdFromToken(token: String): String =
+        parseClaims(token)?.subject
+            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token.")
+
+    private fun buildToken(userId: String, type: TokenType, expiryMs: Long): String {
+        val now = java.util.Date()
+        val expiry = java.util.Date(now.time + expiryMs)
         return Jwts.builder()
             .subject(userId)
-            .claim("type", type)
+            .claim(CLAIM_TYPE, type.value)
             .issuedAt(now)
-            .expiration(expiryDate)
-            .signWith(secretkey, Jwts.SIG.HS256)
+            .expiration(expiry)
+            .signWith(secretKey, Jwts.SIG.HS256)
             .compact()
     }
 
-    fun generateAccessToken(userId: String): String = generateToken(userId, "access", accessTokenValidtyMs)
-
-    fun generateRefreshToken(userId: String): String = generateToken(userId, "refresh", refreshTokenValidityMs)
-
-    fun validateAccessToken(token: String): Boolean {
-        val claims = parseAllClaims(token) ?: return false
-        val tokenType = claims["type"] as? String ?: return false
-        return tokenType == "access"
-    }
-
-    fun validateRefreshToken(token: String): Boolean {
-        val claims = parseAllClaims(token) ?: return false
-        val tokenType = claims["type"] as? String ?: return false
-        return tokenType == "refresh"
-    }
-
-    fun getUserIdFromToken(token: String): String {
-        val claims = parseAllClaims(token) ?: throw ResponseStatusException(
-            HttpStatusCode.valueOf(401),
-            "Invalid token."
-        )
-        return claims.subject
-    }
-
-    private fun parseAllClaims(token: String): Claims? {
-        val rawToken = if (token.startsWith("Bearer ")) {
-            token.removePrefix("Bearer ")
-        } else token
+    private fun parseClaims(token: String): TokenClaims? {
+        val raw = token.removePrefix(BEARER_PREFIX).ifBlank { token }
         return try {
-            Jwts.parser()
-                .verifyWith(secretkey)
+            val payload = Jwts.parser()
+                .verifyWith(secretKey)
                 .build()
-                .parseSignedClaims(rawToken)
+                .parseSignedClaims(raw)
                 .payload
-        } catch (e: Exception) {
+            TokenClaims(
+                subject = payload.subject,
+                tokenType = (payload[CLAIM_TYPE] as? String)?.let { TokenType.from(it) }
+            )
+        } catch (_: JwtException) {
             null
         }
+    }
+
+    private data class TokenClaims(
+        val subject: String,
+        val tokenType: TokenType?
+    )
+
+    private enum class TokenType(val value: String) {
+        ACCESS("access"),
+        REFRESH("refresh");
+
+        companion object {
+            fun from(value: String): TokenType? = entries.find { it.value == value }
+        }
+    }
+
+    private companion object {
+        const val BEARER_PREFIX = "Bearer "
+        const val CLAIM_TYPE = "type"
     }
 }
