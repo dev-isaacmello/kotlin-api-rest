@@ -57,6 +57,16 @@ class NoteController(
         return repository.findByOwnerId(ObjectId(ownerId)).map { it.toResponse() }
     }
 
+    @DeleteMapping("/{id}")
+    fun deleteById(@PathVariable id: String) {
+        val note = noteRepository.findById(ObjectId(id)).orElseThrow {
+            IllegalArgumentException("Note not found with id: $id")
+        }
+
+        val ownerId = SecurityContextHolder.getContext().authentication!!.principal as String
+        if (note.ownerId.toHexString() == ownerId) repository.deleteById(ObjectId(id))
+    }
+
 
 
     private fun Note.toResponse(): NoteResponse = NoteResponse(
